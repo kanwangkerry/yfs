@@ -30,6 +30,11 @@ lock_client::stat(lock_protocol::lockid_t lid)
 lock_protocol::status
 lock_client::acquire(lock_protocol::lockid_t lid)
 {
+	//TODO: add multi-thread mutex
+	int r;
+	lock_protocol::status ret = cl->call(lock_protocol::acquire, cl->id(), lid, r);
+	VERIFY (ret == lock_protocol::OK);
+	return r;
 }
 
 lock_protocol::status
