@@ -15,10 +15,12 @@ class lock_server {
 	protected:
 		int nacquire;
 		enum lock_status {LOCKED, FREE};
-		std::map<lock_protocol::lockid_t, lock_status> locks;
+		std::map<lock_protocol::lockid_t, lock_server::lock_status> locks;
 
-		pthread_mutex_t m_lock;
-		pthread_cond_t lock_assigned;
+		//2 mutex for acquire and release
+		pthread_mutex_t lock_server_acq_m;
+		pthread_mutex_t lock_server_rel_m;
+		pthread_cond_t lock_free_cond;
 
 	public:
 		lock_server();
