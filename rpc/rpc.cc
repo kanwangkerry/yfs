@@ -548,7 +548,6 @@ rpcs::dispatch(djob_t *j)
 	rpcs::rpcstate_t stat;
 	char *b1;
 	int sz1;
-
 	if(h.clt_nonce){
 		// have i seen this client before?
 		{
@@ -656,14 +655,73 @@ rpcs::dispatch(djob_t *j)
 //   INPROGRESS: seen this xid, and still processing it.
 //   DONE: seen this xid, previous reply returned in *b and *sz.
 //   FORGOTTEN: might have seen this xid, but deleted previous reply.
-rpcs::rpcstate_t 
+	rpcs::rpcstate_t 
 rpcs::checkduplicate_and_update(unsigned int clt_nonce, unsigned int xid,
 		unsigned int xid_rep, char **b, int *sz)
 {
 	ScopedLock rwl(&reply_window_m_);
 
-        // You fill this in for Lab 1.
-	return NEW;
+	std::list<reply_t>::iterator it, end;
+	it = reply_window_[clt_nonce].begin();
+	end = reply_window_[clt_nonce].end();
+	rpcs::rpcstate_t state = NEW;
+
+	//get the latest forget xid for this clt.
+	//insert a new record if clt not exist.
+	unsigned int latest_forget_xid = 0;
+	if(latest_rep_xid_.count(clt_nonce) == 0){
+		latest_rep_xid_[clt_nonce] = 0;
+	}
+	else
+		latest_forget_xid = latest_rep_xid_[clt_nonce];
+
+
+	while (it != end)
+	{
+		if (it->xid == xid)
+			break;
+		it ++;
+	}
+
+	if( it == end )
+	{
+		//either a forgotten one or a new one.
+		//return if forgotten
+		if(xid <= latest_forget_xid && latest_forget_xid != 0)
+			return FORGOTTEN;
+		//a new one;
+		reply_t reply_new(xid);
+		reply_window_[clt_nonce].push_back(reply_new);
+		state = NEW;
+	}
+	// an exist reply
+	else{
+		if(it -> cb_present){
+			*b = it->buf;
+			*sz = it->sz;
+			state = DONE;
+		}
+		else{
+			state = INPROGRESS;
+		}
+	}
+
+	//update this map for latest_rep_xid_
+	if(xid_rep > latest_forget_xid){
+		latest_forget_xid = xid_rep;	
+		latest_rep_xid_[clt_nonce] = latest_forget_xid;
+	}
+
+	//remove history
+	it = reply_window_[clt_nonce].begin();
+	while(it != reply_window_[clt_nonce].end()){
+		if(it->xid <= xid_rep){
+			delete it->buf;
+			reply_window_[clt_nonce].erase(it++);
+		}
+		else it++;
+	}
+	return state;
 }
 
 // rpcs::dispatch calls add_reply when it is sending a reply to an RPC,
@@ -671,15 +729,26 @@ rpcs::checkduplicate_and_update(unsigned int clt_nonce, unsigned int xid,
 // add_reply() should remember b and sz.
 // free_reply_window() and checkduplicate_and_update is responsible for 
 // calling free(b).
-void
+	void
 rpcs::add_reply(unsigned int clt_nonce, unsigned int xid,
 		char *b, int sz)
 {
 	ScopedLock rwl(&reply_window_m_);
-        // You fill this in for Lab 1.
+	// You fill this in for Lab 1.
+	std::list<reply_t>::iterator it, end;
+	it = reply_window_[clt_nonce].begin();
+	end = reply_window_[clt_nonce].end();
+	while(it != end){
+		if(it->xid == xid){
+			it->buf = b;
+			it->sz = sz;
+			it->cb_present = 1;
+		}
+		it++;
+	}
 }
 
-void
+	void
 rpcs::free_reply_window(void)
 {
 	std::map<unsigned int,std::list<reply_t> >::iterator clt;
@@ -696,7 +765,7 @@ rpcs::free_reply_window(void)
 }
 
 // rpc handler
-int 
+	int 
 rpcs::rpcbind(int a, int &r)
 {
 	jsl_log(JSL_DBG_2, "rpcs::rpcbind called return nonce %u\n", nonce_);
@@ -704,7 +773,7 @@ rpcs::rpcbind(int a, int &r)
 	return 0;
 }
 
-void
+	void
 marshall::rawbyte(unsigned char x)
 {
 	if(_ind >= _capa){
@@ -716,7 +785,7 @@ marshall::rawbyte(unsigned char x)
 	_buf[_ind++] = x;
 }
 
-void
+	void
 marshall::rawbytes(const char *p, int n)
 {
 	if((_ind+n) > _capa){
@@ -729,21 +798,21 @@ marshall::rawbytes(const char *p, int n)
 	_ind += n;
 }
 
-marshall &
+	marshall &
 operator<<(marshall &m, bool x)
 {
 	m.rawbyte(x);
 	return m;
 }
 
-marshall &
+	marshall &
 operator<<(marshall &m, unsigned char x)
 {
 	m.rawbyte(x);
 	return m;
 }
 
-marshall &
+	marshall &
 operator<<(marshall &m, char x)
 {
 	m << (unsigned char) x;
@@ -751,7 +820,7 @@ operator<<(marshall &m, char x)
 }
 
 
-marshall &
+	marshall &
 operator<<(marshall &m, unsigned short x)
 {
 	m.rawbyte((x >> 8) & 0xff);
