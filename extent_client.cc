@@ -54,4 +54,34 @@ extent_client::remove(extent_protocol::extentid_t eid)
   return ret;
 }
 
+extent_protocol::status
+extent_client::get_dir(extent_protocol::extentid_t eid, std::string name, extent_protocol::extentid_t &file_id)
+{
+  extent_protocol::status ret = extent_protocol::OK;
+  ret = cl->call(extent_protocol::get_dir, eid, name, file_id);
+  return ret;
+}
 
+extent_protocol::status
+extent_client::put_dir(extent_protocol::extentid_t eid, std::string name, extent_protocol::extentid_t &file_id)
+{
+  extent_protocol::status ret = extent_protocol::OK;
+  ret = cl->call(extent_protocol::put_dir, eid, name, file_id);
+  return ret;
+}
+
+extent_protocol::status
+extent_client::read_dir_name(extent_protocol::extentid_t eid, std::string &dir_name)
+{
+  extent_protocol::status ret = extent_protocol::OK;
+  ret = cl->call(extent_protocol::read_dir_name, eid, dir_name);
+  return ret;
+}
+
+extent_protocol::status
+extent_client::read_dir_id(extent_protocol::extentid_t eid, std::string &dir_id)
+{
+  extent_protocol::status ret = extent_protocol::OK;
+  ret = cl->call(extent_protocol::read_dir_id, eid, dir_id);
+  return ret;
+}

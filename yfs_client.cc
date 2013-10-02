@@ -33,6 +33,23 @@ yfs_client::filename(inum inum)
   return ost.str();
 }
 
+std::vector<std::string>
+yfs_client::split_file_name(std::string p){
+	std::vector<std::string> result;
+	unsigned int index = 0, l_index = 0;
+	while(index < p.size()){
+		l_index = p.find(" ", index);
+		if(l_index == std::string::npos){
+			break;
+		}
+		else{
+			result.push_back(p.substr(index, l_index - index));
+			index = l_index + 1;
+		}
+	}
+	return result;
+}
+
 bool
 yfs_client::isfile(inum inum)
 {
@@ -89,5 +106,34 @@ yfs_client::getdir(inum inum, dirinfo &din)
   return r;
 }
 
+/**
+ * Look up @parent the file @name. return error when rpc call get 
+ * erro. return NOENT when no matching file @name found.
+ */
+int
+yfs_client::lookup(inum parent, const char *name, bool &found, inum &file_inum){
+	std::string parent_buf;
+	std::string name_s(name);
+	int r = ec->get_dir(parent, name_s, file_inum);
+	if(r == extent_protocol::OK){
+		found = true;
+	}
+	else{
+		found = false;
+	}
+	return r;
+}
 
+int
+yfs_client::create(inum parent, const char *name, inum &file_id)
+{
+	std::string s_name(name);
+	int r = ec->put_dir(parent, name, file_id);
+	if(r != extent_protocol::OK)
+		return r;
+
+	r = ec->put(file_id, "");
+	return r;
+
+}
 

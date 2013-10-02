@@ -34,6 +34,7 @@ class yfs_client {
  private:
   static std::string filename(inum);
   static inum n2i(std::string);
+  static std::vector<std::string> split_file_name(std::string p);
  public:
 
   yfs_client(std::string, std::string);
@@ -43,6 +44,8 @@ class yfs_client {
 
   int getfile(inum, fileinfo &);
   int getdir(inum, dirinfo &);
+  int lookup(inum parent, const char *name, bool &found, inum &file_inum);
+  int create(inum parent, const char *name, inum &file_inum);
 };
 
 #endif 

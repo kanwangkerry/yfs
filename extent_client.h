@@ -20,6 +20,10 @@ class extent_client {
 				  extent_protocol::attr &a);
   extent_protocol::status put(extent_protocol::extentid_t eid, std::string buf);
   extent_protocol::status remove(extent_protocol::extentid_t eid);
+  extent_protocol::status get_dir(extent_protocol::extentid_t eid, std::string name, extent_protocol::extentid_t &file_id);
+  extent_protocol::status put_dir(extent_protocol::extentid_t eid, std::string name, extent_protocol::extentid_t &file_id);
+  extent_protocol::status read_dir_id(extent_protocol::extentid_t eid, std::string &dir_id);
+  extent_protocol::status read_dir_name(extent_protocol::extentid_t eid, std::string &dir_name);
 };
 
 #endif 
