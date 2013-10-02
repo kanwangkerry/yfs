@@ -141,8 +141,12 @@ extent_server::put_dir(extent_protocol::extentid_t id, std::string name, extent_
 	if(dir_content[id].count(name) != 0){
 		printf("file name already exists: %s in dir %lld\n", name.c_str(), id);
 	}
-	while(attribute.count(file_id)!=0)
+	while(attribute.count(file_id)!=0){
 		file_id ++;
+		file_id = file_id & 0x000000007fffffff;
+	}
+	file_id = file_id & 0x000000007FFFFFFF;
+	file_id = file_id | 0x0000000080000000;
 	dir_content[id][name] = file_id;
 	temp_a.ctime = current_time;
 	temp_a.mtime = current_time;
@@ -159,6 +163,7 @@ std::string get_filename(extent_protocol::extentid_t id)
   return ost.str();
 }
 
+//add empty hole NULL into the returned string, as a delimeter
 int
 extent_server::read_dir_name(extent_protocol::extentid_t id, std::string &dir_name)
 {
@@ -176,7 +181,7 @@ extent_server::read_dir_name(extent_protocol::extentid_t id, std::string &dir_na
 
 	dir_name = "";
 	for (std::map<std::string,extent_protocol::extentid_t>::iterator it=dir_content[id].begin(); it!=dir_content[id].end(); ++it){
-		dir_name = dir_name + it->first + " ";
+		dir_name = dir_name + it->first + '\0';
 	}
 
 	temp_a = attribute[id];
@@ -205,7 +210,7 @@ extent_server::read_dir_id(extent_protocol::extentid_t id, std::string &dir_id)
 
 	dir_id = "";
 	for (std::map<std::string,extent_protocol::extentid_t>::iterator it=dir_content[id].begin(); it!=dir_content[id].end(); ++it){
-		dir_id = dir_id + get_filename(it->second) + " ";
+		dir_id = dir_id + get_filename(it->second) + '\0';
 	}
 
 	temp_a = attribute[id];

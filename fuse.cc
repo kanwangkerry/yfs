@@ -27,8 +27,8 @@ int id() {
 
 yfs_client::inum generate_ino_id(bool isfile){
 	unsigned long long rand_id = rand();
-	if(isfile){
-		return rand_id & 0x78888888;
+	if(!isfile){
+		return rand_id & 0x7FFFFFFF;
 	}
 	else{
 		return rand_id | 0x80000000;
@@ -387,6 +387,16 @@ fuseserver_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
 
 
 	// You fill this in for Lab 2
+	std::vector<std::string> dir_name;
+	std::vector<yfs_client::inum> dir_id;
+	int ret = yfs->readdir(inum, dir_name, dir_id);
+	if(ret != yfs_client::OK){
+		printf("readdir -> %lu fail on %d\n", ino, ret);
+	}
+
+	for(unsigned int i = 0 ; i < dir_name.size() ; i++){
+		dirbuf_add(&b, dir_name[i].c_str(), dir_id[i]);
+	}
 
 
 	reply_buf_limited(req, b.p, b.size, off, size);

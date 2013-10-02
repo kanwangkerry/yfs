@@ -33,12 +33,16 @@ yfs_client::filename(inum inum)
   return ost.str();
 }
 
+/**
+ *	Split a string with empyt hole NULL as the delimeter
+ *
+ */
 std::vector<std::string>
-yfs_client::split_file_name(std::string p){
+yfs_client::split_string(std::string p){
 	std::vector<std::string> result;
 	unsigned int index = 0, l_index = 0;
 	while(index < p.size()){
-		l_index = p.find(" ", index);
+		l_index = p.find('\0', index);
 		if(l_index == std::string::npos){
 			break;
 		}
@@ -136,4 +140,40 @@ yfs_client::create(inum parent, const char *name, inum &file_id)
 	return r;
 
 }
+int 
+yfs_client::readdir(inum parent, std::vector<std::string> &dir_name, std::vector<inum> &dir_id)
+{
+	std::string name_buf;
+	std::string id_buf;
+	std::vector<std::string> temp_id;
+	dir_id.clear();
 
+	if(isfile(parent)){
+		printf("readdir %llu not a dir\n", parent);
+		return yfs_client::IOERR;
+	}
+
+	int r;
+	r = ec->read_dir_id(parent, id_buf);
+	if(r != extent_protocol::OK){
+		printf("readdir %llu error on %d\n", parent, r);
+		return r;
+	}
+
+	r = ec->read_dir_name(parent, name_buf);
+	if(r != extent_protocol::OK){
+		printf("readdir %llu error on %d\n", parent, r);
+		return r;
+	}
+
+	dir_name = split_string(name_buf);
+	temp_id = split_string(id_buf);
+	if(dir_name.size() != dir_id.size()){
+		printf("readdir %llu error: id and name are different\n", parent);
+	}
+	for(unsigned int i = 0 ; i < temp_id.size() ; i++){
+		dir_id.push_back(n2i(temp_id[i]));
+	}
+
+	return yfs_client::OK;
+}
