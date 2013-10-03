@@ -69,7 +69,7 @@ int extent_server::getattr(extent_protocol::extentid_t id, extent_protocol::attr
 	// unmount) if getattr fails.
 	if(content.count(id) == 0){
 		printf("file key not exists: %lld\n", id);
-		return extent_protocol::OK;
+		return extent_protocol::NOENT;
 	}
 	a = attribute[id];
 	return extent_protocol::OK;
@@ -141,12 +141,16 @@ extent_server::put_dir(extent_protocol::extentid_t id, std::string name, extent_
 	if(dir_content[id].count(name) != 0){
 		printf("file name already exists: %s in dir %lld\n", name.c_str(), id);
 	}
+	file_id =  file_id & 0x000000007FFFFFFF;
+	file_id = file_id | 0x0000000080000000;
 	while(attribute.count(file_id)!=0){
 		file_id ++;
 		file_id = file_id & 0x000000007fffffff;
+		file_id = file_id | 0x0000000080000000;
 	}
-	file_id = file_id & 0x000000007FFFFFFF;
-	file_id = file_id | 0x0000000080000000;
+	long long unsigned temp = file_id;
+	temp =  temp & 0x00000000FFFFFFFF;
+	file_id = temp | 0x0000000080000000;
 	dir_content[id][name] = file_id;
 	temp_a.ctime = current_time;
 	temp_a.mtime = current_time;
@@ -219,5 +223,33 @@ extent_server::read_dir_id(extent_protocol::extentid_t id, std::string &dir_id)
 
 	pthread_mutex_unlock(&extent_server_m);
 
+	return extent_protocol::OK;
+}
+
+int extent_server::setattr(extent_protocol::extentid_t id, extent_protocol::attr a, int &)
+{
+	// You fill this in for Lab 2.
+	// You replace this with a real implementation. We send a phony response
+	// for now because it's difficult to get FUSE to do anything (including
+	// unmount) if getattr fails.
+	if(content.count(id) == 0){
+		printf("file key not exists: %lld\n", id);
+		return extent_protocol::NOENT;
+	}
+
+	pthread_mutex_lock(&extent_server_m);
+	//TODO: only set the size now
+	
+	//if current size if smaller, set the appending '\0's, or truncating
+	if(a.size < attribute[id].size){
+		content[id] = content[id].substr(0, a.size);
+	}
+	else{
+		for(unsigned int i = 0 ; i < a.size - attribute[id].size ; i++){
+			content[id].push_back('\0');
+		}
+	}
+	attribute[id].size = a.size;
+	pthread_mutex_unlock(&extent_server_m);
 	return extent_protocol::OK;
 }

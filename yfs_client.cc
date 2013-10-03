@@ -177,3 +177,114 @@ yfs_client::readdir(inum parent, std::vector<std::string> &dir_name, std::vector
 
 	return yfs_client::OK;
 }
+
+int
+yfs_client::setattr(inum id, fileinfo fin)
+{
+  int r = OK;
+
+  printf("setattr %016llx\n", id);
+  extent_protocol::attr a;
+  a.size = fin.size;
+  if (ec->setattr(id, a) != extent_protocol::OK) {
+    r = IOERR;
+    goto release;
+  }
+
+  printf("setattr %016llx -> sz %llu\n", id, fin.size);
+
+ release:
+
+  return r;
+}
+
+int
+yfs_client::write(inum id, const char *buf, size_t size, off_t off)
+{
+	int r;
+	printf("write %016llx\n", id);
+	std::string s_buf;
+	extent_protocol::attr a;
+	r = ec->get(id, s_buf);
+//	printf("DEBUG: write %016llx writing %s, %u, %u\n", id, buf, size, off);
+	if(r != extent_protocol::OK){
+		printf("write %016llx fail on %d when get\n", id, r);
+		return r;
+	}
+
+	r = ec->getattr(id, a);
+	if(r != extent_protocol::OK){
+		printf("write %016llx fail on %d when getattr\n", id, r);
+		return r;
+	}
+	if(s_buf.size() != a.size){
+		printf("write %016llx fail: size not same %u & %u, buf is %s\n", id, s_buf.size(), a.size, s_buf.data());
+		return yfs_client::IOERR;
+	}
+	unsigned int l = size + off;
+	for(unsigned int i = a.size ; i < off ; i++){
+		s_buf.push_back('\0');
+	}
+	for(unsigned int i = s_buf.size(); i < l; i++){
+		s_buf.push_back('\0');
+	}
+	for(unsigned int i = 0 ; i < size ; i ++){
+		s_buf[off+i] = buf[i];
+	}
+	a.size = s_buf.size();
+	//put data and attr
+	r = ec->put(id, s_buf);
+	if(r != extent_protocol::OK){
+		printf("write %016llx fail: put fail on %d, buf is %s\n", id, r, s_buf.data());
+		return r;
+	}
+	return yfs_client::OK;
+
+
+
+
+}
+
+int
+yfs_client::read(inum id, size_t &size, off_t off, std::string &buf){
+	int r;
+	printf("write %016llx\n", id);
+	std::string s_buf;
+	extent_protocol::attr a;
+	r = ec->get(id, s_buf);
+	if(r != extent_protocol::OK){
+		printf("write %016llx fail on %d when get\n", id, r);
+		return r;
+	}
+
+	r = ec->getattr(id, a);
+	if(r != extent_protocol::OK){
+		printf("write %016llx fail on %d when getattr\n", id, r);
+		return r;
+	}
+
+	if(s_buf.size() != a.size){
+		printf("write %016llx fail: size not same %u & %u, buf is %s\n", id, s_buf.size(), a.size, s_buf.data());
+		return yfs_client::IOERR;
+	}
+	unsigned int l;
+	if(off > a.size){
+		l = 0;
+		size = 0;
+		buf = "";
+	}
+	else{
+		if(off + size > a.size){
+			l = a.size - off;
+			size = l;
+		}
+		else
+			l = size;
+		buf = s_buf.substr(off, l);
+	}
+	//printf("DEBUG: read %016llx writing %s, %u, %u\n", id, buf.data(), size, off);
+
+	return yfs_client::OK;
+
+
+}

@@ -18,7 +18,8 @@ class extent_protocol {
 	get_dir,
 	put_dir,
 	read_dir_id,
-	read_dir_name
+	read_dir_name,
+	setattr
   };
 
   struct attr {

@@ -20,6 +20,7 @@ class extent_server {
   int put_dir(extent_protocol::extentid_t id, std::string name, extent_protocol::extentid_t &file_id);
   int read_dir_name(extent_protocol::extentid_t id, std::string &dir_name);
   int read_dir_id(extent_protocol::extentid_t id, std::string &dir_id);
+  int setattr(extent_protocol::extentid_t id, extent_protocol::attr attr, int &);
 
   
  private:
