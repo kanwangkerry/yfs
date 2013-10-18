@@ -23,7 +23,6 @@ int extent_server::put(extent_protocol::extentid_t id, std::string buf, int &)
 
 	struct extent_protocol::attr temp_a;
 	unsigned int current_time = time(NULL);
-//	printf("put called at %u \n", current_time);
 	if(content.count(id) != 0){
 		temp_a = attribute[id];
 		printf("file key already exists: %lld\n", id);
@@ -33,7 +32,6 @@ int extent_server::put(extent_protocol::extentid_t id, std::string buf, int &)
 	temp_a.mtime = current_time;
 	temp_a.size = buf.size();
 	attribute[id] = temp_a;
-//	printf("file key %lld have mtime: %u, %u", id, attribute[id].mtime, current_time);
 	
 	pthread_mutex_unlock(&extent_server_m);
 	return extent_protocol::OK;
@@ -74,7 +72,6 @@ int extent_server::getattr(extent_protocol::extentid_t id, extent_protocol::attr
 		return extent_protocol::NOENT;
 	}
 	a = attribute[id];
-//	printf("in get attr: file key %lld have mtime: %u\n", id, a.mtime);
 	return extent_protocol::OK;
 }
 
