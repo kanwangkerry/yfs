@@ -22,10 +22,12 @@ class extent_client {
   extent_protocol::status remove(extent_protocol::extentid_t eid);
   extent_protocol::status get_dir(extent_protocol::extentid_t eid, std::string name, extent_protocol::extentid_t &file_id);
   extent_protocol::status put_dir(extent_protocol::extentid_t eid, std::string name, extent_protocol::extentid_t &file_id);
+  extent_protocol::status make_dir(extent_protocol::extentid_t eid, std::string name, extent_protocol::extentid_t &file_id);
   extent_protocol::status read_dir_id(extent_protocol::extentid_t eid, std::string &dir_id);
   extent_protocol::status read_dir_name(extent_protocol::extentid_t eid, std::string &dir_name);
   extent_protocol::status setattr(extent_protocol::extentid_t eid, 
 		  extent_protocol::attr a);
+  extent_protocol::status unlink_file(extent_protocol::extentid_t id, std::string name, extent_protocol::extentid_t file_id);
 };
 
 #endif 

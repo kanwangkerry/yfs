@@ -17,9 +17,11 @@ class extent_protocol {
     remove,
 	get_dir,
 	put_dir,
+	make_dir,
 	read_dir_id,
 	read_dir_name,
-	setattr
+	setattr,
+	unlink_file
   };
 
   struct attr {

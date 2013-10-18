@@ -71,6 +71,14 @@ extent_client::put_dir(extent_protocol::extentid_t eid, std::string name, extent
 }
 
 extent_protocol::status
+extent_client::make_dir(extent_protocol::extentid_t eid, std::string name, extent_protocol::extentid_t &file_id)
+{
+  extent_protocol::status ret = extent_protocol::OK;
+  ret = cl->call(extent_protocol::make_dir, eid, name, file_id);
+  return ret;
+}
+
+extent_protocol::status
 extent_client::read_dir_name(extent_protocol::extentid_t eid, std::string &dir_name)
 {
   extent_protocol::status ret = extent_protocol::OK;
@@ -94,5 +102,13 @@ extent_client::setattr(extent_protocol::extentid_t eid,
 	int r;
 
 	ret = cl->call(extent_protocol::setattr, eid, attr, r);
+	return ret;
+}
+
+extent_protocol::status
+extent_client::unlink_file(extent_protocol::extentid_t id, std::string name, extent_protocol::extentid_t file_id){
+	extent_protocol::status ret = extent_protocol::OK;
+	int r;
+	ret = cl->call(extent_protocol::unlink_file, id, name, file_id, r);
 	return ret;
 }

@@ -38,7 +38,7 @@ lock_client::acquire(lock_protocol::lockid_t lid)
 	lock_protocol::status ret = cl->call(lock_protocol::acquire, cl->id(), lid, r);
 	VERIFY (ret == lock_protocol::OK);
 	pthread_mutex_unlock(&lock_client_acq_m);
-	return r;
+	return ret;
 }
 
 lock_protocol::status
@@ -50,6 +50,6 @@ lock_client::release(lock_protocol::lockid_t lid)
 	lock_protocol::status ret = cl->call(lock_protocol::release, cl->id(), lid, r);
 	VERIFY (ret == lock_protocol::OK);
 	pthread_mutex_unlock(&lock_client_rel_m);
-	return r;
+	return ret;
 }
 

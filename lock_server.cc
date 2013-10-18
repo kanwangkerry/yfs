@@ -58,6 +58,9 @@ lock_server::release(int clt, lock_protocol::lockid_t lid, int &r){
 
 	if(locks[lid] == lock_server::FREE)
 		ret = lock_protocol::IOERR;
+	else
+		printf("release call from client %d on lock id %llu.\n", clt, lid);
+
 
 	locks[lid] = lock_server::FREE;
 	pthread_cond_broadcast(&lock_free_cond);
@@ -66,5 +69,8 @@ lock_server::release(int clt, lock_protocol::lockid_t lid, int &r){
 	r = nacquire;
 
 	pthread_mutex_unlock(&lock_server_rel_m);
+	if(ret == lock_protocol::OK){
+		printf("OKOK!!");
+	}
 	return ret;
 }

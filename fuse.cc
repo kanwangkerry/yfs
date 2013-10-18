@@ -67,6 +67,7 @@ getattr(yfs_client::inum inum, struct stat &st)
      st.st_mtime = info.mtime;
      st.st_ctime = info.ctime;
      st.st_size = info.size;
+     printf("   getattr --> %lu %lu %lu\n", info.atime, info.mtime, info.ctime);
      printf("   getattr -> %llu\n", info.size);
    } else {
      yfs_client::dirinfo info;
@@ -440,20 +441,42 @@ void
 fuseserver_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
      mode_t mode)
 {
-  struct fuse_entry_param e;
-  // In yfs, timeouts are always set to 0.0, and generations are always set to 0
-  e.attr_timeout = 0.0;
-  e.entry_timeout = 0.0;
-  e.generation = 0;
-  // Suppress compiler warning of unused e.
-  (void) e;
+	struct fuse_entry_param e;
+	// In yfs, timeouts are always set to 0.0, and generations are always set to 0
+	e.attr_timeout = 0.0;
+	e.entry_timeout = 0.0;
+	e.generation = 0;
+	// Suppress compiler warning of unused e.
 
-  // You fill this in for Lab 3
-#if 0
-  fuse_reply_entry(req, &e);
-#else
-  fuse_reply_err(req, ENOSYS);
-#endif
+	bool found = false;
+	yfs_client::inum dir_inum;
+	//try to look up the file
+	int ret = yfs->lookup(parent, name, found, dir_inum);
+	if(ret == yfs_client::RPCERR || ret == yfs_client::IOERR){
+		printf("fuseserver_mkdir -> %lu %s fail on %d", parent, name, ret);
+		fuse_reply_err(req, ENOSYS);
+	}
+	if(found || ret != yfs_client::NOENT){
+		printf("fuseserver_mkdir : file %s already exists on %lu", name, parent);
+		fuse_reply_err(req, EEXIST);
+	}
+
+	//not found, try to create a new one.
+	dir_inum = generate_ino_id(false);
+	//TODO call another to mkdir
+	ret = yfs->mkdir(parent, name, dir_inum);
+//	ret = yfs->create(parent, name, file_inum);
+	if(ret != yfs_client::OK){
+		printf("fuseserver_mkdir -> %lu %s fail on %d, file inum is %llu", parent, name, ret, dir_inum);
+		fuse_reply_err(req, ENOSYS);
+	}
+	e.ino = dir_inum;
+	ret = getattr(dir_inum, e.attr);
+	if(ret != yfs_client::OK){
+		printf("fuseserver_mkdir -> %lu %s fail on %d, file inum is %llu, fail get attr", parent, name, ret, dir_inum);
+		fuse_reply_err(req, ENOSYS);
+	}
+	fuse_reply_entry(req, &e);
 }
 
 //
@@ -463,55 +486,74 @@ fuseserver_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 //
 // Do *not* allow unlinking of a directory.
 //
-void
+	void
 fuseserver_unlink(fuse_req_t req, fuse_ino_t parent, const char *name)
 {
 
-  // You fill this in for Lab 3
-  // Success:	fuse_reply_err(req, 0);
-  // Not found:	fuse_reply_err(req, ENOENT);
-  fuse_reply_err(req, ENOSYS);
+	// You fill this in for Lab 3
+	// Success:	fuse_reply_err(req, 0);
+	// Not found:	fuse_reply_err(req, ENOENT);
+	bool found = false;
+	yfs_client::inum file_inum;
+	//try to look up the file
+	int ret = yfs->lookup(parent, name, found, file_inum);
+	if(ret == yfs_client::RPCERR || ret == yfs_client::IOERR){
+		printf("fuseserver_unlink -> %lu %s fail on %d", parent, name, ret);
+		fuse_reply_err(req, ENOSYS);
+	}
+	if(!found){
+		printf("fuseserver_unlink: file %s not exists on %lu", name, parent);
+		fuse_reply_err(req, ENOENT);
+	}
+
+	// found the file, delete it
+	ret = yfs->unlink(parent, name, file_inum);
+	if(ret != yfs_client::OK){
+		printf("fuseserver_unlink -> %lu %s fail on %d, file inum is %llu", parent, name, ret, file_inum);
+		fuse_reply_err(req, ENOSYS);
+	}
+	fuse_reply_err(req, 0);
 }
 
-void
+	void
 fuseserver_statfs(fuse_req_t req)
 {
-  struct statvfs buf;
+	struct statvfs buf;
 
-  printf("statfs\n");
+	printf("statfs\n");
 
-  memset(&buf, 0, sizeof(buf));
+	memset(&buf, 0, sizeof(buf));
 
-  buf.f_namemax = 255;
-  buf.f_bsize = 512;
+	buf.f_namemax = 255;
+	buf.f_bsize = 512;
 
-  fuse_reply_statfs(req, &buf);
+	fuse_reply_statfs(req, &buf);
 }
 
 struct fuse_lowlevel_ops fuseserver_oper;
 
-int
+	int
 main(int argc, char *argv[])
 {
-  char *mountpoint = 0;
-  int err = -1;
-  int fd;
+	char *mountpoint = 0;
+	int err = -1;
+	int fd;
 
-  setvbuf(stdout, NULL, _IONBF, 0);
+	setvbuf(stdout, NULL, _IONBF, 0);
 
-  if(argc != 4){
-    fprintf(stderr, "Usage: yfs_client <mountpoint> <port-extent-server> <port-lock-server>\n");
-    exit(1);
-  }
-  mountpoint = argv[1];
+	if(argc != 4){
+		fprintf(stderr, "Usage: yfs_client <mountpoint> <port-extent-server> <port-lock-server>\n");
+		exit(1);
+	}
+	mountpoint = argv[1];
 
-  srandom(getpid());
+	srandom(getpid());
 
-  myid = random();
+	myid = random();
 
-  yfs = new yfs_client(argv[2], argv[3]);
+	yfs = new yfs_client(argv[2], argv[3]);
 
-  fuseserver_oper.getattr    = fuseserver_getattr;
+	fuseserver_oper.getattr    = fuseserver_getattr;
   fuseserver_oper.statfs     = fuseserver_statfs;
   fuseserver_oper.readdir    = fuseserver_readdir;
   fuseserver_oper.lookup     = fuseserver_lookup;

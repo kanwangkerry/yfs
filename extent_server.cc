@@ -23,6 +23,7 @@ int extent_server::put(extent_protocol::extentid_t id, std::string buf, int &)
 
 	struct extent_protocol::attr temp_a;
 	unsigned int current_time = time(NULL);
+//	printf("put called at %u \n", current_time);
 	if(content.count(id) != 0){
 		temp_a = attribute[id];
 		printf("file key already exists: %lld\n", id);
@@ -32,6 +33,7 @@ int extent_server::put(extent_protocol::extentid_t id, std::string buf, int &)
 	temp_a.mtime = current_time;
 	temp_a.size = buf.size();
 	attribute[id] = temp_a;
+//	printf("file key %lld have mtime: %u, %u", id, attribute[id].mtime, current_time);
 	
 	pthread_mutex_unlock(&extent_server_m);
 	return extent_protocol::OK;
@@ -72,6 +74,7 @@ int extent_server::getattr(extent_protocol::extentid_t id, extent_protocol::attr
 		return extent_protocol::NOENT;
 	}
 	a = attribute[id];
+//	printf("in get attr: file key %lld have mtime: %u\n", id, a.mtime);
 	return extent_protocol::OK;
 }
 
@@ -122,6 +125,10 @@ extent_server::get_dir(extent_protocol::extentid_t id, std::string name, extent_
 	return extent_protocol::OK;
 }
 
+/**
+ * put_dir is put a file "name" into the id dir
+ */
+
 int
 extent_server::put_dir(extent_protocol::extentid_t id, std::string name, extent_protocol::extentid_t &file_id)
 {
@@ -155,6 +162,47 @@ extent_server::put_dir(extent_protocol::extentid_t id, std::string name, extent_
 	temp_a.ctime = current_time;
 	temp_a.mtime = current_time;
 	attribute[id] = temp_a;
+	
+	pthread_mutex_unlock(&extent_server_m);
+	return extent_protocol::OK;
+}
+
+
+//this function is put a dir into a id directory
+int
+extent_server::make_dir(extent_protocol::extentid_t id, std::string name, extent_protocol::extentid_t &file_id)
+{
+	// You fill this in for Lab 2.
+
+	pthread_mutex_lock(&extent_server_m);
+
+	struct extent_protocol::attr temp_a;
+	unsigned int current_time = time(NULL);
+	if(dir_content.count(id) != 0){
+		temp_a = attribute[id];
+	}
+	else{
+		std::map<std::string, extent_protocol::extentid_t> temp_map;
+		dir_content[id] = temp_map;
+	}
+	if(dir_content[id].count(name) != 0){
+		printf("file name already exists: %s in dir %lld\n", name.c_str(), id);
+	}
+	printf("id: %016llx\n", file_id);
+	file_id =  file_id & 0x000000007FFFFFFF;
+	while(attribute.count(file_id)!=0){
+		file_id ++;
+		file_id = file_id & 0x000000007fffffff;
+	}
+	file_id = file_id & 0x000000007fffffff;
+	printf("id: %016llx\n", file_id);
+	dir_content[id][name] = file_id;
+	temp_a.ctime = current_time;
+	temp_a.mtime = current_time;
+	attribute[id] = temp_a;
+
+	std::map<std::string, extent_protocol::extentid_t> temp_map;
+	dir_content[file_id] = temp_map;
 	
 	pthread_mutex_unlock(&extent_server_m);
 	return extent_protocol::OK;
@@ -240,6 +288,7 @@ int extent_server::setattr(extent_protocol::extentid_t id, extent_protocol::attr
 	pthread_mutex_lock(&extent_server_m);
 	//TODO: only set the size now
 	
+	unsigned int current_time = time(NULL);	
 	//if current size if smaller, set the appending '\0's, or truncating
 	if(a.size < attribute[id].size){
 		content[id] = content[id].substr(0, a.size);
@@ -250,6 +299,44 @@ int extent_server::setattr(extent_protocol::extentid_t id, extent_protocol::attr
 		}
 	}
 	attribute[id].size = a.size;
+	attribute[id].mtime = current_time;
+	attribute[id].ctime= current_time;
+	
+	pthread_mutex_unlock(&extent_server_m);
+	return extent_protocol::OK;
+}
+
+int
+extent_server::unlink_file(extent_protocol::extentid_t id, std::string name, extent_protocol::extentid_t file_id, int &)
+{
+	// You fill this in for Lab 3.
+
+	pthread_mutex_lock(&extent_server_m);
+
+	struct extent_protocol::attr temp_a;
+	unsigned int current_time = time(NULL);
+	if(dir_content.count(id) != 0){
+		temp_a = attribute[id];
+	}
+	else{
+		printf("dir not exists: dir %lld\n", id);
+		return extent_protocol::NOENT;
+	}
+	if(dir_content[id].count(name) != 0){
+		printf("file not exists: dir %lld, file %s\n", id, name.c_str());
+	}
+
+	//remove from the dir
+	dir_content[id].erase(name);
+	temp_a.ctime = current_time;
+	temp_a.mtime = current_time;
+	attribute[id] = temp_a;
+
+	//if file_id is dir, also remove the dir_content
+	if((file_id & 0x0000000080000000) == 0){
+		dir_content.erase(file_id);
+	}
+	
 	pthread_mutex_unlock(&extent_server_m);
 	return extent_protocol::OK;
 }

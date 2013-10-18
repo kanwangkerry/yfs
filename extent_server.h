@@ -18,9 +18,11 @@ class extent_server {
   int remove(extent_protocol::extentid_t id, int &);
   int get_dir(extent_protocol::extentid_t id, std::string name, extent_protocol::extentid_t &file_id);
   int put_dir(extent_protocol::extentid_t id, std::string name, extent_protocol::extentid_t &file_id);
+  int make_dir(extent_protocol::extentid_t id, std::string name, extent_protocol::extentid_t &file_id);
   int read_dir_name(extent_protocol::extentid_t id, std::string &dir_name);
   int read_dir_id(extent_protocol::extentid_t id, std::string &dir_id);
   int setattr(extent_protocol::extentid_t id, extent_protocol::attr attr, int &);
+  int unlink_file(extent_protocol::extentid_t id, std::string name, extent_protocol::extentid_t file_id, int &);
 
   
  private:
