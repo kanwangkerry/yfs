@@ -83,8 +83,8 @@ yfs_client::getfile(inum inum, fileinfo &fin)
 	r = IOERR;
 	goto release;
   }
-  if (ec->getattr(inum, a) != extent_protocol::OK) {
-    r = IOERR;
+  r = ec->getattr(inum, a);
+  if (r != extent_protocol::OK) {
     goto release;
   }
 
@@ -422,15 +422,13 @@ yfs_client::unlink(inum parent, const char *name, inum file_id)
 		r = IOERR;
 		goto release;
 	}	
-	r = ec->unlink_file(parent, name, file_id);
-	if(r != extent_protocol::OK)
-		goto release;
-
-	lid_f = file_id;
 	if(lc->acquire(lid_f) != lock_protocol::OK){
 		r = IOERR;
 		goto release;
 	}	
+	r = ec->unlink_file(parent, name, file_id);
+	if(r != extent_protocol::OK)
+		goto release;
 
 	r = ec->remove(file_id);
 release:

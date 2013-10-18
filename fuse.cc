@@ -26,6 +26,7 @@ int id() {
 }
 
 yfs_client::inum generate_ino_id(bool isfile){
+	srandom(getpid());
 	unsigned long long rand_id = rand();
 	if(!isfile){
 		return rand_id & 0x7FFFFFFF;
@@ -338,6 +339,7 @@ fuseserver_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
 		e.ino = file_inum;
 		ret = getattr(file_inum, e.attr);
 		if(ret != yfs_client::OK){
+			
 			printf("lookup -> %lu %s fail on %d, when calling getattr\n", parent, name, ret);
 		}
 	}

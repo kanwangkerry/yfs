@@ -42,14 +42,14 @@ int extent_server::get(extent_protocol::extentid_t id, std::string &buf)
 	// You fill this in for Lab 2.
 	// lock mutex because we modify the access time
 
+	pthread_mutex_lock(&extent_server_m);
 	unsigned int current_time = time(NULL);	
 	struct extent_protocol::attr temp_a;
 	if(content.count(id) == 0){
 		printf("file key not exists: %lld\n", id);
+		pthread_mutex_unlock(&extent_server_m);
 		return extent_protocol::NOENT;
 	}
-
-	pthread_mutex_lock(&extent_server_m);
 
 	buf = content[id];
 	temp_a = attribute[id];
@@ -67,11 +67,14 @@ int extent_server::getattr(extent_protocol::extentid_t id, extent_protocol::attr
 	// You replace this with a real implementation. We send a phony response
 	// for now because it's difficult to get FUSE to do anything (including
 	// unmount) if getattr fails.
+	pthread_mutex_lock(&extent_server_m);
 	if(content.count(id) == 0){
 		printf("file key not exists: %lld\n", id);
+		pthread_mutex_unlock(&extent_server_m);
 		return extent_protocol::NOENT;
 	}
 	a = attribute[id];
+	pthread_mutex_unlock(&extent_server_m);
 	return extent_protocol::OK;
 }
 
@@ -79,12 +82,13 @@ int extent_server::remove(extent_protocol::extentid_t id, int &)
 {
 	// You fill this in for Lab 2.
 
+	pthread_mutex_lock(&extent_server_m);
 	if(content.count(id) == 0){
 		printf("file key not exists: %lld\n", id);
+		pthread_mutex_unlock(&extent_server_m);
 		return extent_protocol::NOENT;
 	}
 
-	pthread_mutex_lock(&extent_server_m);
 
 	content.erase(id);
 	attribute.erase(id);
@@ -99,18 +103,19 @@ extent_server::get_dir(extent_protocol::extentid_t id, std::string name, extent_
 	// You fill this in for Lab 2.
 	// lock mutex because we modify the access time
 
+	pthread_mutex_lock(&extent_server_m);
 	unsigned int current_time = time(NULL);	
 	struct extent_protocol::attr temp_a;
 	if(dir_content.count(id) == 0){
 		printf("dir key not exists: %lld\n", id);
+		pthread_mutex_unlock(&extent_server_m);
 		return extent_protocol::NOENT;
 	}
 	if(dir_content[id].count(name) == 0){
 		printf("dir key not exists: %lld\n", id);
+		pthread_mutex_unlock(&extent_server_m);
 		return extent_protocol::NOENT;
 	}
-
-	pthread_mutex_lock(&extent_server_m);
 
 	file_id = dir_content[id][name];
 	temp_a = attribute[id];
@@ -126,7 +131,7 @@ extent_server::get_dir(extent_protocol::extentid_t id, std::string name, extent_
  * put_dir is put a file "name" into the id dir
  */
 
-int
+	int
 extent_server::put_dir(extent_protocol::extentid_t id, std::string name, extent_protocol::extentid_t &file_id)
 {
 	// You fill this in for Lab 2.
@@ -159,14 +164,15 @@ extent_server::put_dir(extent_protocol::extentid_t id, std::string name, extent_
 	temp_a.ctime = current_time;
 	temp_a.mtime = current_time;
 	attribute[id] = temp_a;
-	
+	attribute[file_id] = temp_a;
+
 	pthread_mutex_unlock(&extent_server_m);
 	return extent_protocol::OK;
 }
 
 
 //this function is put a dir into a id directory
-int
+	int
 extent_server::make_dir(extent_protocol::extentid_t id, std::string name, extent_protocol::extentid_t &file_id)
 {
 	// You fill this in for Lab 2.
@@ -197,6 +203,7 @@ extent_server::make_dir(extent_protocol::extentid_t id, std::string name, extent
 	temp_a.ctime = current_time;
 	temp_a.mtime = current_time;
 	attribute[id] = temp_a;
+	attribute[file_id] = temp_a;
 
 	std::map<std::string, extent_protocol::extentid_t> temp_map;
 	dir_content[file_id] = temp_map;
@@ -219,14 +226,15 @@ extent_server::read_dir_name(extent_protocol::extentid_t id, std::string &dir_na
 	// You fill this in for Lab 2.
 	// lock mutex because we modify the access time
 
+	pthread_mutex_lock(&extent_server_m);
 	unsigned int current_time = time(NULL);	
 	struct extent_protocol::attr temp_a;
 	if(dir_content.count(id) == 0){
 		printf("dir key not exists: %lld\n", id);
+		pthread_mutex_unlock(&extent_server_m);
 		return extent_protocol::NOENT;
 	}
 
-	pthread_mutex_lock(&extent_server_m);
 
 	dir_name = "";
 	for (std::map<std::string,extent_protocol::extentid_t>::iterator it=dir_content[id].begin(); it!=dir_content[id].end(); ++it){
@@ -248,14 +256,15 @@ extent_server::read_dir_id(extent_protocol::extentid_t id, std::string &dir_id)
 	// You fill this in for Lab 2.
 	// lock mutex because we modify the access time
 
+	pthread_mutex_lock(&extent_server_m);
 	unsigned int current_time = time(NULL);	
 	struct extent_protocol::attr temp_a;
 	if(dir_content.count(id) == 0){
 		printf("dir key not exists: %lld\n", id);
+		pthread_mutex_unlock(&extent_server_m);
 		return extent_protocol::NOENT;
 	}
 
-	pthread_mutex_lock(&extent_server_m);
 
 	dir_id = "";
 	for (std::map<std::string,extent_protocol::extentid_t>::iterator it=dir_content[id].begin(); it!=dir_content[id].end(); ++it){
@@ -277,12 +286,13 @@ int extent_server::setattr(extent_protocol::extentid_t id, extent_protocol::attr
 	// You replace this with a real implementation. We send a phony response
 	// for now because it's difficult to get FUSE to do anything (including
 	// unmount) if getattr fails.
+	pthread_mutex_lock(&extent_server_m);
 	if(content.count(id) == 0){
 		printf("file key not exists: %lld\n", id);
+		pthread_mutex_unlock(&extent_server_m);
 		return extent_protocol::NOENT;
 	}
 
-	pthread_mutex_lock(&extent_server_m);
 	//TODO: only set the size now
 	
 	unsigned int current_time = time(NULL);	
