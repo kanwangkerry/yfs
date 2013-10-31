@@ -20,11 +20,6 @@ class lock_release_user {
 };
 
 class lock_client_cache : public lock_client {
- private:
-  class lock_release_user *lu;
-  int rlock_port;
-  std::string hostname;
-  std::string id;
  public:
   lock_client_cache(std::string xdst, class lock_release_user *l = 0);
   virtual ~lock_client_cache() {};
@@ -34,6 +29,36 @@ class lock_client_cache : public lock_client {
                                         int &);
   rlock_protocol::status retry_handler(lock_protocol::lockid_t, 
                                        int &);
+  enum lock_status{
+	  none = 0x8001,
+	  free,
+	  locked,
+	  acquiring,
+	  releasing
+  };
+ private:
+  class lock_release_user *lu;
+  int rlock_port;
+  std::string hostname;
+  std::string id;
+
+  std::map<lock_protocol::lockid_t, lock_client_cache::lock_status> lock_state_map;
+  //maintain how many threads is waiting on the lock
+  std::map<lock_protocol::lockid_t, int> lock_queue;
+  //maintain a cond signal for each lock
+  std::map<lock_protocol::lockid_t, pthread_cond_t> lock_cond;
+  //maintain another cond for revoking
+  std::map<lock_protocol::lockid_t, pthread_cond_t> lock_revoke;
+  std::map<lock_protocol::lockid_t, bool> lock_revoke_called;
+  std::map<lock_protocol::lockid_t, pthread_cond_t> lock_revoke_finished;
+  //maintain a cond on retry
+  //retry means the server directly send the ownership to this client.
+  //do not need to send acquire again
+  std::map<lock_protocol::lockid_t, pthread_cond_t> lock_retry;
+
+  std::map<lock_protocol::lockid_t, bool> lock_retry_called;
+  pthread_mutex_t _m;
+
 };
 
 
